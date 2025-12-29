@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -85,11 +85,6 @@
             border: 2px solid #ef4444;
         }
 
-        .mqtt-status.connecting {
-            background: rgba(251, 191, 36, 0.2);
-            border: 2px solid #fbbf24;
-        }
-
         .status-dot {
             width: 10px;
             height: 10px;
@@ -103,10 +98,6 @@
 
         .mqtt-status.disconnected .status-dot {
             background: #ef4444;
-        }
-
-        .mqtt-status.connecting .status-dot {
-            background: #fbbf24;
         }
 
         @keyframes pulse {
@@ -369,46 +360,26 @@
             font-family: 'Courier New', monospace;
         }
 
-        /* Console Log */
-        .console-section {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-height: 300px;
-            overflow-y: auto;
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            opacity: 0.7;
         }
 
-        .console-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #4ade80;
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
         }
 
-        .console-log {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.8;
-        }
-
-        .console-log div {
-            padding: 5px 10px;
-            border-left: 3px solid #4ade80;
-            margin-bottom: 5px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 5px;
-        }
-
-        .console-log .error {
-            border-left-color: #ef4444;
-            color: #fca5a5;
-        }
-
-        .console-log .info {
-            border-left-color: #60a5fa;
-            color: #93c5fd;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         /* Responsive */
@@ -442,8 +413,15 @@
                     <input type="text" id="brokerUrl" placeholder="broker.avisha.id" value="broker.avisha.id">
                 </div>
                 <div class="input-group">
-                    <label>WebSocket Port</label>
+                    <label>WebSocket Port (WSS)</label>
                     <input type="number" id="brokerPort" placeholder="8084" value="8084">
+                </div>
+                <div class="input-group">
+                    <label>Use Secure (WSS)</label>
+                    <select id="useSSL" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 12px 15px; color: #fff; font-size: 14px;">
+                        <option value="wss" selected>Yes (WSS - Port 8084/8085)</option>
+                        <option value="ws">No (WS - Port 8083)</option>
+                    </select>
                 </div>
                 <div class="input-group">
                     <label>Username</label>
@@ -508,25 +486,14 @@
                 <!-- Will be populated by JavaScript -->
             </div>
         </div>
-
-        <!-- Console Log -->
-        <div class="console-section">
-            <div class="console-title">📋 Console Log</div>
-            <div class="console-log" id="consoleLog">
-                <div class="info">System initialized...</div>
-            </div>
-        </div>
     </div>
 
     <script>
-        // ==========================================
-        // MQTT CONFIGURATION & VARIABLES
-        // ==========================================
+        // MQTT Configuration
         let client = null;
         let baseTopic = 'Arudammediatech_mqtt';
-        let isProcessingMessage = false; // ✅ Prevent message loop
         
-        // ✅ PENTING: Topic structure baru dengan /set dan /status
+        // Relay data (sesuai topic Avisha Anda)
         const relays = [
             { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', status: false },
             { id: 2, name: 'Lampu Kamar 1', topic: 'lampu 2', status: false },
@@ -536,37 +503,14 @@
             { id: 6, name: 'Lampu Kamar Mandi', topic: 'Lampu 6', status: false }
         ];
 
-        // ==========================================
-        // CONSOLE LOGGING
-        // ==========================================
-        function log(message, type = 'info') {
-            const consoleLog = document.getElementById('consoleLog');
-            const timestamp = new Date().toLocaleTimeString();
-            const div = document.createElement('div');
-            div.className = type;
-            div.textContent = `[${timestamp}] ${message}`;
-            consoleLog.appendChild(div);
-            consoleLog.scrollTop = consoleLog.scrollHeight;
-            
-            // Keep only last 50 logs
-            while(consoleLog.children.length > 50) {
-                consoleLog.removeChild(consoleLog.firstChild);
-            }
-            
-            console.log(message);
-        }
-
-        // ==========================================
-        // INITIALIZE
-        // ==========================================
+        // Initialize
         function init() {
             renderRelays();
-            log('Dashboard ready. Click "Connect MQTT" to start.');
+            // Auto-connect if you want
+            // connectMQTT();
         }
 
-        // ==========================================
-        // RENDER RELAY CARDS
-        // ==========================================
+        // Render relay cards
         function renderRelays() {
             const grid = document.getElementById('relayGrid');
             grid.innerHTML = '';
@@ -580,7 +524,7 @@
                     <div class="relay-icon">💡</div>
                     <div class="relay-name">${relay.name}</div>
                     <div class="relay-status">${relay.status ? 'ON' : 'OFF'}</div>
-                    <div class="relay-topic">${relay.topic}</div>
+                    <div class="relay-topic">${baseTopic}/${relay.topic}</div>
                 `;
                 
                 grid.appendChild(card);
@@ -589,26 +533,25 @@
             updateStats();
         }
 
-        // ==========================================
-        // CONNECT TO MQTT BROKER
-        // ==========================================
+        // Connect to MQTT Broker
         function connectMQTT() {
             const brokerUrl = document.getElementById('brokerUrl').value;
             const brokerPort = document.getElementById('brokerPort').value;
+            const useSSL = document.getElementById('useSSL').value;
             const mqttUser = document.getElementById('mqttUser').value;
             const mqttPass = document.getElementById('mqttPass').value;
             baseTopic = document.getElementById('baseTopic').value;
 
-            // Validate
+            // Validate inputs
             if(!brokerUrl || !brokerPort || !mqttUser || !mqttPass) {
                 alert('⚠️ Please fill all MQTT configuration fields!');
                 return;
             }
 
+            // Update status
             updateStatus('connecting', 'Connecting...');
-            log('Connecting to MQTT broker...', 'info');
 
-            // MQTT Client ID
+            // MQTT.js connection via WebSocket
             const clientId = 'mqtt_dashboard_' + Math.random().toString(16).substr(2, 8);
             
             const options = {
@@ -620,148 +563,110 @@
                 password: mqttPass
             };
 
-            // ✅ Connect via WebSocket
-            const wsUrl = `ws://${brokerUrl}:${brokerPort}/mqtt`;
-            log(`Connecting to: ${wsUrl}`, 'info');
+            // Build WebSocket URL (WS atau WSS)
+            const protocol = useSSL === 'wss' ? 'wss' : 'ws';
+            const wsUrl = `${protocol}://${brokerUrl}:${brokerPort}/mqtt`;
+            
+            console.log('🔌 Connecting to:', wsUrl);
+            console.log('📋 Options:', options);
             
             client = mqtt.connect(wsUrl, options);
 
-            // ==========================================
-            // ON CONNECT
-            // ==========================================
             client.on('connect', () => {
-                log('✅ MQTT Connected!', 'info');
+                console.log('✅ MQTT Connected!');
                 updateStatus('connected', 'Connected');
                 
-                // ✅ SUBSCRIBE HANYA KE TOPIC /status (BUKAN /set!)
+                // Subscribe to all relay topics
                 relays.forEach(relay => {
-                    const statusTopic = `${baseTopic}/${relay.topic}/status`;
-                    client.subscribe(statusTopic, (err) => {
+                    const topic = `${baseTopic}/${relay.topic}`;
+                    client.subscribe(topic, (err) => {
                         if(!err) {
-                            log(`📡 Subscribed: ${statusTopic}`, 'info');
-                        } else {
-                            log(`❌ Subscribe error: ${statusTopic}`, 'error');
+                            console.log('📡 Subscribed:', topic);
                         }
                     });
                 });
 
-                // Subscribe to sensor topics
-                client.subscribe(`${baseTopic}/Suhu`);
-                client.subscribe(`${baseTopic}/Kelembaban`);
-                
-                log('All subscriptions ready', 'info');
+                // Subscribe to sensor topic (if exists)
+                client.subscribe(`${baseTopic}/Suhu`, (err) => {
+                    if(!err) console.log('📡 Subscribed: Suhu');
+                });
             });
 
-            // ==========================================
-            // ON MESSAGE (TERIMA STATUS DARI ESP)
-            // ==========================================
             client.on('message', (topic, message) => {
-                // ✅ PREVENT LOOP - Jika sedang proses, skip
-                if(isProcessingMessage) {
-                    return;
-                }
-                
                 const payload = message.toString();
-                log(`📨 Received: ${topic} = ${payload}`, 'info');
+                console.log('📨 Message:', topic, payload);
                 
-                // ✅ HANYA PROSES TOPIC /status (BUKAN /set!)
-                if(topic.includes('/status')) {
-                    isProcessingMessage = true; // Lock
-                    
-                    // Update relay status
-                    relays.forEach(relay => {
-                        const statusTopic = `${baseTopic}/${relay.topic}/status`;
-                        if(topic === statusTopic) {
-                            const newStatus = (payload === 'ON' || payload === '1' || payload === 'true');
-                            
-                            // ✅ HANYA UPDATE JIKA BERBEDA
-                            if(relay.status !== newStatus) {
-                                relay.status = newStatus;
-                                renderRelays();
-                                log(`💡 ${relay.name} status updated: ${newStatus ? 'ON' : 'OFF'}`, 'info');
-                            }
-                        }
-                    });
-                    
-                    setTimeout(() => {
-                        isProcessingMessage = false; // Unlock after 200ms
-                    }, 200);
-                }
+                // Handle relay status
+                relays.forEach(relay => {
+                    if(topic === `${baseTopic}/${relay.topic}`) {
+                        relay.status = (payload === 'ON' || payload === '1');
+                        renderRelays();
+                    }
+                });
 
-                // Handle sensor data
-                if(topic.includes('Suhu')) {
-                    document.getElementById('temperature').textContent = payload + '°C';
-                }
-                if(topic.includes('Kelembaban')) {
-                    document.getElementById('humidity').textContent = payload + '%';
+                // Handle sensor data (customize based on your format)
+                if(topic.includes('Suhu') || topic.includes('temperature')) {
+                    try {
+                        const data = JSON.parse(payload);
+                        if(data.temperature) document.getElementById('temperature').textContent = data.temperature + '°C';
+                        if(data.humidity) document.getElementById('humidity').textContent = data.humidity + '%';
+                    } catch(e) {
+                        // Plain value
+                        if(topic.includes('Suhu')) {
+                            document.getElementById('temperature').textContent = payload + '°C';
+                        }
+                    }
                 }
             });
 
-            // ==========================================
-            // ERROR HANDLERS
-            // ==========================================
             client.on('error', (err) => {
-                log('❌ MQTT Error: ' + err.message, 'error');
-                updateStatus('disconnected', 'Error');
+                console.error('❌ MQTT Error:', err);
+                updateStatus('disconnected', 'Error: ' + err.message);
             });
 
             client.on('close', () => {
-                log('⚠️ MQTT Connection closed', 'info');
+                console.log('⚠️ MQTT Closed');
                 updateStatus('disconnected', 'Disconnected');
-            });
-
-            client.on('offline', () => {
-                log('⚠️ MQTT Offline', 'info');
-                updateStatus('disconnected', 'Offline');
             });
         }
 
-        // ==========================================
-        // DISCONNECT MQTT
-        // ==========================================
+        // Disconnect MQTT
         function disconnectMQTT() {
             if(client) {
                 client.end();
                 client = null;
                 updateStatus('disconnected', 'Disconnected');
-                log('Disconnected from MQTT broker', 'info');
             }
         }
 
-        // ==========================================
-        // TOGGLE RELAY (KIRIM COMMAND KE ESP)
-        // ==========================================
+        // Toggle relay
         function toggleRelay(relay) {
             if(!client || !client.connected) {
                 alert('⚠️ Please connect to MQTT broker first!');
                 return;
             }
 
-            // ✅ KIRIM KE TOPIC /set (BUKAN LANGSUNG KE NAMA RELAY!)
             const newStatus = !relay.status;
             const payload = newStatus ? 'ON' : 'OFF';
-            const commandTopic = `${baseTopic}/${relay.topic}/set`; // ✅ /set!
+            const topic = `${baseTopic}/${relay.topic}`;
 
-            log(`📤 Publishing command: ${commandTopic} = ${payload}`, 'info');
+            console.log('📤 Publishing:', topic, '=', payload);
 
-            // ✅ PUBLISH DENGAN QoS 0 & RETAIN FALSE
-            client.publish(commandTopic, payload, { qos: 0, retain: false }, (err) => {
+            // Publish to MQTT
+            client.publish(topic, payload, { qos: 0, retain: true }, (err) => {
                 if(!err) {
-                    log(`✅ Command sent successfully`, 'info');
-                    
-                    // ✅ OPTIMISTIC UPDATE (update UI langsung)
+                    console.log('✅ Published successfully');
+                    // Optimistic update (langsung update UI)
                     relay.status = newStatus;
                     renderRelays();
                 } else {
-                    log(`❌ Publish error: ${err.message}`, 'error');
+                    console.error('❌ Publish error:', err);
                     alert('Failed to control relay. Check console for details.');
                 }
             });
         }
 
-        // ==========================================
-        // UPDATE CONNECTION STATUS UI
-        // ==========================================
+        // Update connection status
         function updateStatus(status, text) {
             const statusEl = document.getElementById('mqttStatus');
             const statusText = document.getElementById('statusText');
@@ -774,39 +679,32 @@
             if(status === 'connected') {
                 connectBtn.style.display = 'none';
                 disconnectBtn.style.display = 'inline-block';
+                // Disable inputs
                 document.querySelectorAll('.input-group input').forEach(input => {
                     input.disabled = true;
                 });
             } else {
                 connectBtn.style.display = 'inline-block';
                 disconnectBtn.style.display = 'none';
+                // Enable inputs
                 document.querySelectorAll('.input-group input').forEach(input => {
                     input.disabled = false;
                 });
             }
         }
 
-        // ==========================================
-        // UPDATE STATISTICS
-        // ==========================================
+        // Update statistics
         function updateStats() {
             const onCount = relays.filter(r => r.status).length;
             document.getElementById('relayCount').textContent = `${onCount}/6`;
         }
 
-        // ==========================================
-        // INITIALIZE ON PAGE LOAD
-        // ==========================================
+        // Initialize on load
         window.onload = init;
 
-        // ==========================================
-        // CLEANUP ON PAGE CLOSE
-        // ==========================================
+        // Cleanup on close
         window.onbeforeunload = () => {
-            if(client) {
-                log('Closing connection...', 'info');
-                client.end();
-            }
+            if(client) client.end();
         };
     </script>
 </body>
