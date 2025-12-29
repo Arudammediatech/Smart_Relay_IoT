@@ -1,63 +1,813 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Relay Avisha</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <title>Smart Relay MQTT Dashboard</title>
+    <!-- MQTT.js Library from CDN -->
+    <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    
     <style>
-        body { font-family: sans-serif; background: #1e293b; color: white; display: flex; justify-content: center; padding: 20px; }
-        .card { background: #334155; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; text-align: center; }
-        .status { padding: 10px; margin-bottom: 20px; border-radius: 8px; font-weight: bold; }
-        .offline { background: #ef4444; } .online { background: #22c55e; }
-        .btn { background: #3b82f6; border: none; padding: 15px; color: white; border-radius: 10px; width: 100%; cursor: pointer; margin: 5px 0; font-size: 16px; }
-        .btn:active { background: #2563eb; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .connection-panel {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mqtt-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .mqtt-status.connected {
+            background: rgba(74, 222, 128, 0.2);
+            border: 2px solid #4ade80;
+        }
+
+        .mqtt-status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+        }
+
+        .mqtt-status.connecting {
+            background: rgba(251, 191, 36, 0.2);
+            border: 2px solid #fbbf24;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .mqtt-status.connected .status-dot {
+            background: #4ade80;
+        }
+
+        .mqtt-status.disconnected .status-dot {
+            background: #ef4444;
+        }
+
+        .mqtt-status.connecting .status-dot {
+            background: #fbbf24;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .config-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .input-group input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 12px 15px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #a5b4fc;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: #000;
+        }
+
+        .btn-disconnect {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #4ade80, #60a5fa);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            font-weight: 600;
+        }
+
+        .stat-icon {
+            font-size: 30px;
+            opacity: 0.6;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stat-subtitle {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        /* Relay Control */
+        .control-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .relay-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .relay-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 25px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .relay-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .relay-card:hover::before {
+            opacity: 1;
+        }
+
+        .relay-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .relay-card.on {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.2));
+            border-color: #fbbf24;
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+        }
+
+        .relay-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+            filter: grayscale(100%);
+            transition: all 0.4s;
+        }
+
+        .relay-card.on .relay-icon {
+            filter: grayscale(0%) drop-shadow(0 0 15px rgba(251, 191, 36, 0.8));
+            animation: glow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .relay-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .relay-status {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .relay-card.off .relay-status {
+            background: rgba(148, 163, 184, 0.3);
+            color: #cbd5e1;
+        }
+
+        .relay-card.on .relay-status {
+            background: rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+
+        .relay-topic {
+            font-size: 10px;
+            opacity: 0.5;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Console Log */
+        .console-section {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .console-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #4ade80;
+        }
+
+        .console-log {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .console-log div {
+            padding: 5px 10px;
+            border-left: 3px solid #4ade80;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .console-log .error {
+            border-left-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .console-log .info {
+            border-left-color: #60a5fa;
+            color: #93c5fd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 24px; }
+            .relay-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            .config-form {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <!-- Header with MQTT Config -->
+        <div class="header">
+            <div class="header-top">
+                <h1>🏠 Smart Relay MQTT Dashboard</h1>
+                <div class="mqtt-status disconnected" id="mqttStatus">
+                    <div class="status-dot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </div>
 
-<div class="card">
-    <h2>Smart Dashboard</h2>
-    <div id="statusBox" class="status offline">Status: Disconnected</div>
-    
-    <button class="btn" onclick="startConnect()">1. KLIK KONEK MQTT</button>
-    <hr>
-    <button class="btn" style="background:#fbbf24; color:black;" onclick="sendCmd('Lampu 1', 'ON')">Lampu 1 ON</button>
-    <button class="btn" style="background:#475569;" onclick="sendCmd('Lampu 1', 'OFF')">Lampu 1 OFF</button>
-</div>
+            <div class="config-form">
+                <div class="input-group">
+                    <label>MQTT Broker</label>
+                    <input type="text" id="brokerUrl" placeholder="broker.avisha.id" value="broker.avisha.id">
+                </div>
+                <div class="input-group">
+                    <label>WebSocket Port</label>
+                    <input type="number" id="brokerPort" placeholder="8084" value="8084">
+                </div>
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="mqttUser" placeholder="username" value="Arudammediatech_mqtt">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="mqttPass" placeholder="password" value="Qwerty12345">
+                </div>
+                <div class="input-group">
+                    <label>Base Topic</label>
+                    <input type="text" id="baseTopic" placeholder="smartrelay" value="Arudammediatech_mqtt">
+                </div>
+            </div>
 
-<script>
-    let client;
-    const MQTT_USER = "Arudammediatech_mqtt";
-    const MQTT_PASS = "Qwerty12345"; // <--- WAJIB DIISI
+            <div class="connection-panel" style="margin-top: 20px;">
+                <button class="btn btn-connect" id="connectBtn" onclick="connectMQTT()">
+                    🔌 Connect MQTT
+                </button>
+                <button class="btn btn-disconnect" id="disconnectBtn" onclick="disconnectMQTT()" style="display: none;">
+                    ✖️ Disconnect
+                </button>
+            </div>
+        </div>
 
-    function startConnect() {
-        document.getElementById("statusBox").innerText = "Connecting...";
-        client = new Paho.MQTT.Client("broker.avisha.id", 8084, "web_" + Math.random());
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">🌡️ Suhu</div>
+                    <div class="stat-icon">🌡️</div>
+                </div>
+                <div class="stat-value" id="temperature">--°C</div>
+                <div class="stat-subtitle">Temperature</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">💧 Kelembaban</div>
+                    <div class="stat-icon">💧</div>
+                </div>
+                <div class="stat-value" id="humidity">--%</div>
+                <div class="stat-subtitle">Humidity</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-label">⚡ Status</div>
+                    <div class="stat-icon">📊</div>
+                </div>
+                <div class="stat-value" id="relayCount">0/6</div>
+                <div class="stat-subtitle">Relay ON</div>
+            </div>
+        </div>
+
+        <!-- Relay Control -->
+        <div class="control-section">
+            <div class="section-title">
+                ⚡ Kontrol Relay
+            </div>
+            <div class="relay-grid" id="relayGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Console Log -->
+        <div class="console-section">
+            <div class="console-title">📋 Console Log</div>
+            <div class="console-log" id="consoleLog">
+                <div class="info">System initialized...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // MQTT CONFIGURATION & VARIABLES
+        // ==========================================
+        let client = null;
+        let baseTopic = 'Arudammediatech_mqtt';
+        let isProcessingMessage = false; // ✅ Prevent message loop
         
-        client.connect({
-            userName: MQTT_USER,
-            password: MQTT_PASS,
-            useSSL: true, // Wajib True untuk GitHub
-            onSuccess: () => {
-                document.getElementById("statusBox").innerText = "Status: Terhubung!";
-                document.getElementById("statusBox").className = "status online";
-                client.subscribe(MQTT_USER + "/#");
-            },
-            onFailure: (e) => {
-                alert("Gagal konek: " + e.errorMessage);
-                document.getElementById("statusBox").className = "status offline";
+        // ✅ PENTING: Topic structure baru dengan /set dan /status
+        const relays = [
+            { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', status: false },
+            { id: 2, name: 'Lampu Kamar 1', topic: 'lampu 2', status: false },
+            { id: 3, name: 'Lampu Kamar 2', topic: 'Lampu 3', status: false },
+            { id: 4, name: 'Ruang Keluarga', topic: 'Lampu 4', status: false },
+            { id: 5, name: 'Lampu Teras Belakang', topic: 'Lampu 5', status: false },
+            { id: 6, name: 'Lampu Kamar Mandi', topic: 'Lampu 6', status: false }
+        ];
+
+        // ==========================================
+        // CONSOLE LOGGING
+        // ==========================================
+        function log(message, type = 'info') {
+            const consoleLog = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${timestamp}] ${message}`;
+            consoleLog.appendChild(div);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            
+            // Keep only last 50 logs
+            while(consoleLog.children.length > 50) {
+                consoleLog.removeChild(consoleLog.firstChild);
             }
-        });
-    }
+            
+            console.log(message);
+        }
 
-    function sendCmd(lampu, state) {
-        if (!client || !client.connected) { alert("Klik Konek MQTT dulu!"); return; }
-        let message = new Paho.MQTT.Message(state);
-        message.destinationName = MQTT_USER + "/" + lampu;
-        client.send(message);
-    }
-</script>
+        // ==========================================
+        // INITIALIZE
+        // ==========================================
+        function init() {
+            renderRelays();
+            log('Dashboard ready. Click "Connect MQTT" to start.');
+        }
 
+        // ==========================================
+        // RENDER RELAY CARDS
+        // ==========================================
+        function renderRelays() {
+            const grid = document.getElementById('relayGrid');
+            grid.innerHTML = '';
+
+            relays.forEach(relay => {
+                const card = document.createElement('div');
+                card.className = `relay-card ${relay.status ? 'on' : 'off'}`;
+                card.onclick = () => toggleRelay(relay);
+                
+                card.innerHTML = `
+                    <div class="relay-icon">💡</div>
+                    <div class="relay-name">${relay.name}</div>
+                    <div class="relay-status">${relay.status ? 'ON' : 'OFF'}</div>
+                    <div class="relay-topic">${relay.topic}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+
+            updateStats();
+        }
+
+        // ==========================================
+        // CONNECT TO MQTT BROKER
+        // ==========================================
+        function connectMQTT() {
+            const brokerUrl = document.getElementById('brokerUrl').value;
+            const brokerPort = document.getElementById('brokerPort').value;
+            const mqttUser = document.getElementById('mqttUser').value;
+            const mqttPass = document.getElementById('mqttPass').value;
+            baseTopic = document.getElementById('baseTopic').value;
+
+            // Validate
+            if(!brokerUrl || !brokerPort || !mqttUser || !mqttPass) {
+                alert('⚠️ Please fill all MQTT configuration fields!');
+                return;
+            }
+
+            updateStatus('connecting', 'Connecting...');
+            log('Connecting to MQTT broker...', 'info');
+
+            // MQTT Client ID
+            const clientId = 'mqtt_dashboard_' + Math.random().toString(16).substr(2, 8);
+            
+            const options = {
+                clientId: clientId,
+                clean: true,
+                connectTimeout: 10000,
+                reconnectPeriod: 5000,
+                username: mqttUser,
+                password: mqttPass
+            };
+
+            // ✅ Connect via WebSocket
+            const wsUrl = `ws://${brokerUrl}:${brokerPort}/mqtt`;
+            log(`Connecting to: ${wsUrl}`, 'info');
+            
+            client = mqtt.connect(wsUrl, options);
+
+            // ==========================================
+            // ON CONNECT
+            // ==========================================
+            client.on('connect', () => {
+                log('✅ MQTT Connected!', 'info');
+                updateStatus('connected', 'Connected');
+                
+                // ✅ SUBSCRIBE HANYA KE TOPIC /status (BUKAN /set!)
+                relays.forEach(relay => {
+                    const statusTopic = `${baseTopic}/${relay.topic}/status`;
+                    client.subscribe(statusTopic, (err) => {
+                        if(!err) {
+                            log(`📡 Subscribed: ${statusTopic}`, 'info');
+                        } else {
+                            log(`❌ Subscribe error: ${statusTopic}`, 'error');
+                        }
+                    });
+                });
+
+                // Subscribe to sensor topics
+                client.subscribe(`${baseTopic}/Suhu`);
+                client.subscribe(`${baseTopic}/Kelembaban`);
+                
+                log('All subscriptions ready', 'info');
+            });
+
+            // ==========================================
+            // ON MESSAGE (TERIMA STATUS DARI ESP)
+            // ==========================================
+            client.on('message', (topic, message) => {
+                // ✅ PREVENT LOOP - Jika sedang proses, skip
+                if(isProcessingMessage) {
+                    return;
+                }
+                
+                const payload = message.toString();
+                log(`📨 Received: ${topic} = ${payload}`, 'info');
+                
+                // ✅ HANYA PROSES TOPIC /status (BUKAN /set!)
+                if(topic.includes('/status')) {
+                    isProcessingMessage = true; // Lock
+                    
+                    // Update relay status
+                    relays.forEach(relay => {
+                        const statusTopic = `${baseTopic}/${relay.topic}/status`;
+                        if(topic === statusTopic) {
+                            const newStatus = (payload === 'ON' || payload === '1' || payload === 'true');
+                            
+                            // ✅ HANYA UPDATE JIKA BERBEDA
+                            if(relay.status !== newStatus) {
+                                relay.status = newStatus;
+                                renderRelays();
+                                log(`💡 ${relay.name} status updated: ${newStatus ? 'ON' : 'OFF'}`, 'info');
+                            }
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        isProcessingMessage = false; // Unlock after 200ms
+                    }, 200);
+                }
+
+                // Handle sensor data
+                if(topic.includes('Suhu')) {
+                    document.getElementById('temperature').textContent = payload + '°C';
+                }
+                if(topic.includes('Kelembaban')) {
+                    document.getElementById('humidity').textContent = payload + '%';
+                }
+            });
+
+            // ==========================================
+            // ERROR HANDLERS
+            // ==========================================
+            client.on('error', (err) => {
+                log('❌ MQTT Error: ' + err.message, 'error');
+                updateStatus('disconnected', 'Error');
+            });
+
+            client.on('close', () => {
+                log('⚠️ MQTT Connection closed', 'info');
+                updateStatus('disconnected', 'Disconnected');
+            });
+
+            client.on('offline', () => {
+                log('⚠️ MQTT Offline', 'info');
+                updateStatus('disconnected', 'Offline');
+            });
+        }
+
+        // ==========================================
+        // DISCONNECT MQTT
+        // ==========================================
+        function disconnectMQTT() {
+            if(client) {
+                client.end();
+                client = null;
+                updateStatus('disconnected', 'Disconnected');
+                log('Disconnected from MQTT broker', 'info');
+            }
+        }
+
+        // ==========================================
+        // TOGGLE RELAY (KIRIM COMMAND KE ESP)
+        // ==========================================
+        function toggleRelay(relay) {
+            if(!client || !client.connected) {
+                alert('⚠️ Please connect to MQTT broker first!');
+                return;
+            }
+
+            // ✅ KIRIM KE TOPIC /set (BUKAN LANGSUNG KE NAMA RELAY!)
+            const newStatus = !relay.status;
+            const payload = newStatus ? 'ON' : 'OFF';
+            const commandTopic = `${baseTopic}/${relay.topic}/set`; // ✅ /set!
+
+            log(`📤 Publishing command: ${commandTopic} = ${payload}`, 'info');
+
+            // ✅ PUBLISH DENGAN QoS 0 & RETAIN FALSE
+            client.publish(commandTopic, payload, { qos: 0, retain: false }, (err) => {
+                if(!err) {
+                    log(`✅ Command sent successfully`, 'info');
+                    
+                    // ✅ OPTIMISTIC UPDATE (update UI langsung)
+                    relay.status = newStatus;
+                    renderRelays();
+                } else {
+                    log(`❌ Publish error: ${err.message}`, 'error');
+                    alert('Failed to control relay. Check console for details.');
+                }
+            });
+        }
+
+        // ==========================================
+        // UPDATE CONNECTION STATUS UI
+        // ==========================================
+        function updateStatus(status, text) {
+            const statusEl = document.getElementById('mqttStatus');
+            const statusText = document.getElementById('statusText');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            statusEl.className = 'mqtt-status ' + status;
+            statusText.textContent = text;
+
+            if(status === 'connected') {
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
+                document.querySelectorAll('.input-group input').forEach(input => {
+                    input.disabled = true;
+                });
+            } else {
+                connectBtn.style.display = 'inline-block';
+                disconnectBtn.style.display = 'none';
+                document.querySelectorAll('.input-group input').forEach(input => {
+                    input.disabled = false;
+                });
+            }
+        }
+
+        // ==========================================
+        // UPDATE STATISTICS
+        // ==========================================
+        function updateStats() {
+            const onCount = relays.filter(r => r.status).length;
+            document.getElementById('relayCount').textContent = `${onCount}/6`;
+        }
+
+        // ==========================================
+        // INITIALIZE ON PAGE LOAD
+        // ==========================================
+        window.onload = init;
+
+        // ==========================================
+        // CLEANUP ON PAGE CLOSE
+        // ==========================================
+        window.onbeforeunload = () => {
+            if(client) {
+                log('Closing connection...', 'info');
+                client.end();
+            }
+        };
+    </script>
 </body>
 </html>
