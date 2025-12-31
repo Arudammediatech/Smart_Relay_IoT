@@ -9,11 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -23,12 +19,9 @@
             color: #fff;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
 
-        /* Compact Header */
+        /* Header */
         .header {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
@@ -39,13 +32,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        .header-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+        .header-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
 
         h1 {
             font-size: 24px;
@@ -55,655 +42,231 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .header-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
+        .mqtt-status { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .mqtt-status.connected { background: rgba(74, 222, 128, 0.2); border: 2px solid #4ade80; }
+        .mqtt-status.disconnected { background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; }
 
-        .mqtt-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .connected .status-dot { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+        .disconnected .status-dot { background: #ef4444; }
 
-        .mqtt-status.connected {
-            background: rgba(74, 222, 128, 0.2);
-            border: 2px solid #4ade80;
-        }
+        /* Config */
+        .config-section { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .config-section.show { max-height: 500px; margin-top: 15px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 11px; font-weight: 600; opacity: 0.8; }
+        .input-group input { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 10px; color: #fff; }
 
-        .mqtt-status.disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            border: 2px solid #ef4444;
-        }
+        /* Buttons & Animations */
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+        .btn:active { transform: scale(0.92); } /* Efek Tekan */
+        .btn-primary { background: linear-gradient(135deg, #4ade80, #22c55e); color: #000; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.15); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
 
-        .mqtt-status.connecting {
-            background: rgba(251, 191, 36, 0.2);
-            border: 2px solid #fbbf24;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .mqtt-status.connected .status-dot { background: #4ade80; }
-        .mqtt-status.disconnected .status-dot { background: #ef4444; }
-        .mqtt-status.connecting .status-dot { background: #fbbf24; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Config Section - Hidden by default */
-        .config-section {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .config-section.show {
-            max-height: 500px;
-            margin-top: 15px;
-        }
-
-        .config-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group label {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.8;
-        }
-
-        .input-group input, .input-group select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: #fff;
-            font-size: 13px;
-        }
-
-        .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4ade80, #22c55e);
-            color: #000;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: #fff;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-icon {
-            font-size: 14px;
-            margin-right: 4px;
-        }
-
-        /* Compact Stats + Sensor */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .info-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s;
-        }
-
-        .info-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .info-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.7;
-            margin-bottom: 8px;
-        }
-
-        .info-value {
-            font-size: 24px;
-            font-weight: 700;
-        }
+        /* Cards Info */
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .info-card { background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .info-value { font-size: 24px; font-weight: 700; margin-top: 5px; }
 
         /* Master Controls */
-        .master-controls {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+        .master-controls { background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .control-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
 
-        .control-title {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        /* Relay Grid Utama */
+        .relay-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 12px; }
+        .relay-card { 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 2px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 12px; padding: 15px; text-align: center; 
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
         }
+        .relay-card:active { transform: scale(0.9); } /* Animasi Tekan Kartu */
+        
+        /* Warna Saat Mati (Abu-abu/Putih redup) */
+        .relay-card .relay-icon { font-size: 32px; margin-bottom: 8px; filter: grayscale(1) opacity(0.5); transition: 0.3s; }
+        .relay-card .relay-name { color: #d1d5db; transition: 0.3s; }
 
-        .control-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-        }
+        /* Warna Saat Menyala (Glowing Kuning) */
+        .relay-card.on { border-color: #fbbf24; background: rgba(251, 191, 36, 0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+        .relay-card.on .relay-icon { filter: grayscale(0) opacity(1) drop-shadow(0 0 8px #fbbf24); }
+        .relay-card.on .relay-name { color: #fff; font-weight: 700; }
 
-        /* Compact Relay Grid */
-        .relay-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        /* Status List Detail (Ramping/Pendek) */
+        .status-section { background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        #statusList { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Membuat grid menyamping agar tidak panjang ke bawah */
+            gap: 10px; 
         }
-
-        .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-            margin-top: 12px;
+        .status-item { 
+            background: rgba(255, 255, 255, 0.05); padding: 10px 15px; 
+            border-radius: 8px; display: flex; justify-content: space-between; 
+            align-items: center; border: 1px solid rgba(255,255,255,0.05); 
         }
-
-        .relay-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .relay-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        }
-
-        .relay-card.on {
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.2));
-            border-color: #fbbf24;
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
-        }
-
-        .relay-icon {
-            font-size: 36px;
-            margin-bottom: 8px;
-            filter: grayscale(100%);
-            transition: all 0.3s;
-        }
-
-        .relay-card.on .relay-icon {
-            filter: grayscale(0%) drop-shadow(0 0 10px rgba(251, 191, 36, 0.8));
-            animation: glow 2s ease-in-out infinite;
-        }
-
-        @keyframes glow {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .relay-name {
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .relay-status {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .relay-card.off .relay-status {
-            background: rgba(148, 163, 184, 0.3);
-            color: #cbd5e1;
-        }
-
-        .relay-card.on .relay-status {
-            background: rgba(251, 191, 36, 0.3);
-            color: #fbbf24;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            h1 { font-size: 20px; }
-            .relay-grid { grid-template-columns: repeat(2, 1fr); }
-            .control-buttons { grid-template-columns: 1fr; }
-        }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; transition: 0.3s; }
+        .active .status-indicator { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Compact Header -->
         <div class="header">
             <div class="header-main">
-                <h1>🏠 Smart Relay Dashboard</h1>
+                <h1>🏠 Smart Arudam IoT</h1>
                 <div class="header-controls">
                     <div class="mqtt-status disconnected" id="mqttStatus">
-                        <div class="status-dot"></div>
-                        <span id="statusText">Disconnected</span>
+                        <div class="status-dot"></div> <span id="statusText">Disconnected</span>
                     </div>
-                    <button class="btn btn-secondary" id="toggleConfigBtn" onclick="toggleConfig()">
-                        <span class="btn-icon">⚙️</span> Config
-                    </button>
-                    <button class="btn btn-primary" id="connectBtn" onclick="connectMQTT()">
-                        <span class="btn-icon">🔌</span> Connect
-                    </button>
-                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectMQTT()" style="display: none;">
-                        <span class="btn-icon">✖️</span> Disconnect
-                    </button>
+                    <button class="btn btn-secondary" onclick="toggleConfig()">⚙️ Config</button>
+                    <button class="btn btn-primary" id="connectBtn" onclick="connectMQTT()">🔌 Connect</button>
+                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectMQTT()" style="display: none;">✖️ Disconnect</button>
                 </div>
             </div>
-
-            <!-- Hidden Config Section -->
             <div class="config-section" id="configSection">
                 <div class="config-grid">
-                    <div class="input-group">
-                        <label>MQTT Broker</label>
-                        <input type="text" id="brokerUrl" value="broker.avisha.id">
-                    </div>
-                    <div class="input-group">
-                        <label>Port</label>
-                        <input type="number" id="brokerPort" value="8084">
-                    </div>
-                    <div class="input-group">
-                        <label>Protocol</label>
-                        <select id="useSSL">
-                            <option value="wss" selected>WSS (Secure)</option>
-                            <option value="ws">WS (Non-secure)</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Username</label>
-                        <input type="text" id="mqttUser" value="Arudammediatech_mqtt">
-                    </div>
-                    <div class="input-group">
-                        <label>Password</label>
-                        <input type="password" id="mqttPass" value="Qwerty12345">
-                    </div>
-                    <div class="input-group">
-                        <label>Base Topic</label>
-                        <input type="text" id="baseTopic" value="Arudammediatech_mqtt">
-                    </div>
+                    <div class="input-group"><label>Broker</label><input type="text" id="brokerUrl" value="broker.avisha.id"></div>
+                    <div class="input-group"><label>WSS Port</label><input type="number" id="brokerPort" value="8084"></div>
+                    <div class="input-group"><label>User</label><input type="text" id="mqttUser" value="Arudam_mqtt"></div>
+                    <div class="input-group"><label>Pass</label><input type="password" id="mqttPass" value="Qwerty12345"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Info Cards: Sensor + Stats -->
         <div class="info-grid">
-            <div class="info-card">
-                <div class="info-label">🌡️ Suhu</div>
-                <div class="info-value" id="temperature">--°C</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">💧 Kelembaban</div>
-                <div class="info-value" id="humidity">--%</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">⚡ Relay Aktif</div>
-                <div class="info-value" id="relayCount">0/6</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">🔌 Daya</div>
-                <div class="info-value" id="powerUsage">0 W</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">💰 Biaya/Jam</div>
-                <div class="info-value" id="costPerHour">Rp 0</div>
-            </div>
+            <div class="info-card"><p>🌡️ Suhu</p><div class="info-value" id="temperature">--°C</div></div>
+            <div class="info-card"><p>🔥 Status Api</p><div class="info-value" id="fireStatus">Aman</div></div>
+            <div class="info-card"><p>⚡ Aktif</p><div class="info-value" id="relayCount">0/8</div></div>
+            <div class="info-card"><p>💰 Biaya/Jam</p><div class="info-value" id="costPerHour">Rp 0</div></div>
         </div>
 
-        <!-- Master Controls -->
         <div class="master-controls">
-            <div class="control-title">⚡ Kontrol Master</div>
+            <p><strong>⚡ Master Control</strong></p>
             <div class="control-buttons">
-                <button class="btn btn-primary" onclick="controlAll('on')">
-                    <span class="btn-icon">💡</span> Nyalakan Semua
-                </button>
-                <button class="btn btn-danger" onclick="controlAll('off')">
-                    <span class="btn-icon">🔌</span> Matikan Semua
-                </button>
-                <button class="btn btn-secondary" onclick="controlAll('toggle')">
-                    <span class="btn-icon">🔄</span> Toggle Semua
-                </button>
+                <button class="btn btn-primary" onclick="controlAll('1')">ON ALL</button>
+                <button class="btn btn-danger" onclick="controlAll('0')">OFF ALL</button>
+                <button class="btn btn-secondary" onclick="controlAll('toggle')">TOGGLE ALL</button>
             </div>
         </div>
 
-        <!-- Relay Grid -->
-        <div class="relay-section">
-            <div class="control-title">🏠 Kontrol Individual</div>
-            <div class="relay-grid" id="relayGrid"></div>
+        <div class="relay-grid" id="relayGrid"></div>
+
+        <div class="status-section" style="margin-top:20px;">
+            <p style="margin-bottom:10px"><strong>📊 Status Detail</strong></p>
+            <div id="statusList"></div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURATION
-        // ==========================================
         let client = null;
-        let baseTopic = 'Arudammediatech_mqtt';
-        const WATTS_PER_RELAY = 10;  // Asumsi 10W per relay
-        const TARIF_LISTRIK = 1500;   // Rp 1500 per kWh
+        const baseTopic = 'Arudam_mqtt';
         
+        // Data Relay tetap sesuai struktur asli Anda
         const relays = [
-            { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', status: false },
-            { id: 2, name: 'Kamar 1', topic: 'Lampu 2', status: false },
-            { id: 3, name: 'Kamar 2', topic: 'Lampu 3', status: false },
-            { id: 4, name: 'Ruang Keluarga', topic: 'Lampu 4', status: false },
-            { id: 5, name: 'Teras Belakang', topic: 'Lampu 5', status: false },
-            { id: 6, name: 'Kamar Mandi', topic: 'Lampu 6', status: false }
+            { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', icon: '💡', status: false },
+            { id: 2, name: 'Lampu Kamar 1', topic: 'Lampu 2', icon: '💡', status: false },
+            { id: 3, name: 'Lampu Kamar 2', topic: 'Lampu 3', icon: '💡', status: false },
+            { id: 4, name: 'Ruang Keluarga', topic: 'Lampu 4', icon: '💡', status: false },
+            { id: 5, name: 'Lampu Dapur', topic: 'Lampu 5', icon: '💡', status: false },
+            { id: 6, name: 'Kamar Mandi', topic: 'Lampu 6', icon: '💡', status: false },
+            { id: 7, name: 'Mesin Air', topic: 'Pompa Air', icon: '💧', status: false },
+            { id: 8, name: 'Kipas', topic: 'Kipas', icon: '🌪️', status: false }
         ];
 
-        // ==========================================
-        // TOGGLE CONFIG PANEL
-        // ==========================================
-        function toggleConfig() {
-            const configSection = document.getElementById('configSection');
-            configSection.classList.toggle('show');
-        }
+        function toggleConfig() { document.getElementById('configSection').classList.toggle('show'); }
 
-        // ==========================================
-        // INITIALIZE
-        // ==========================================
-        function init() {
-            renderRelays();
-            updateStats();
-        }
-
-        // ==========================================
-        // RENDER RELAYS
-        // ==========================================
-        function renderRelays() {
-            const grid = document.getElementById('relayGrid');
-            grid.innerHTML = '';
-
-            relays.forEach(relay => {
-                const card = document.createElement('div');
-                card.className = `relay-card ${relay.status ? 'on' : 'off'}`;
-                card.onclick = () => toggleRelay(relay);
-                
-                card.innerHTML = `
-                    <div class="relay-icon">💡</div>
-                    <div class="relay-name">${relay.name}</div>
-                    <div class="relay-status">${relay.status ? 'ON' : 'OFF'}</div>
-                `;
-                
-                grid.appendChild(card);
-            });
-
-            updateStats();
-        }
-
-        // ==========================================
-        // CONNECT MQTT
-        // ==========================================
         function connectMQTT() {
-            const brokerUrl = document.getElementById('brokerUrl').value;
-            const brokerPort = document.getElementById('brokerPort').value;
-            const useSSL = document.getElementById('useSSL').value;
-            const mqttUser = document.getElementById('mqttUser').value;
-            const mqttPass = document.getElementById('mqttPass').value;
-            baseTopic = document.getElementById('baseTopic').value;
+            const broker = document.getElementById('brokerUrl').value;
+            const port = document.getElementById('brokerPort').value;
+            const user = document.getElementById('mqttUser').value;
+            const pass = document.getElementById('mqttPass').value;
 
-            if(!brokerUrl || !brokerPort || !mqttUser || !mqttPass) {
-                alert('⚠️ Lengkapi semua field konfigurasi!');
-                return;
-            }
-
-            updateStatus('connecting', 'Connecting...');
-
-            const clientId = 'dashboard_' + Math.random().toString(16).substr(2, 8);
-            const options = {
-                clientId: clientId,
-                clean: true,
-                connectTimeout: 10000,
-                reconnectPeriod: 5000,
-                username: mqttUser,
-                password: mqttPass
-            };
-
-            const protocol = useSSL === 'wss' ? 'wss' : 'ws';
-            const wsUrl = `${protocol}://${brokerUrl}:${brokerPort}/mqtt`;
-            
-            console.log('🔌 Connecting:', wsUrl);
-            client = mqtt.connect(wsUrl, options);
+            client = mqtt.connect(`wss://${broker}:${port}/mqtt`, { 
+                username: user, password: pass, 
+                clientId: 'web_' + Math.random().toString(16).substr(2, 8) 
+            });
 
             client.on('connect', () => {
-                console.log('✅ Connected!');
-                updateStatus('connected', 'Connected');
-                
-                // Subscribe ke semua topic status
-                relays.forEach(relay => {
-                    const statusTopic = `${baseTopic}/${relay.topic}/status`;
-                    client.subscribe(statusTopic);
-                    console.log('📡 Subscribed:', statusTopic);
-                });
-
-                // Subscribe sensor
+                updateUIStatus('connected');
+                relays.forEach(r => client.subscribe(`${baseTopic}/${r.topic}`));
                 client.subscribe(`${baseTopic}/Suhu`);
-                client.subscribe(`${baseTopic}/Kelembaban`);
+                client.subscribe(`${baseTopic}/kebakaran`);
             });
 
-            client.on('message', (topic, message) => {
-                const payload = message.toString();
-                console.log('📨', topic, '=', payload);
+            client.on('message', (topic, msg) => {
+                const payload = msg.toString();
+                if(topic.includes('Suhu')) document.getElementById('temperature').textContent = payload + '°C';
+                if(topic.includes('kebakaran')) document.getElementById('fireStatus').textContent = payload;
                 
-                // Update relay status
-                relays.forEach(relay => {
-                    if(topic === `${baseTopic}/${relay.topic}/status` || 
-                       topic === `${baseTopic}/${relay.topic}`) {
-                        relay.status = (payload === 'ON' || payload === '1');
-                        renderRelays();
+                relays.forEach(r => {
+                    if(topic === `${baseTopic}/${r.topic}`) {
+                        r.status = (payload === "1");
+                        updateDisplay();
                     }
                 });
-
-                // Update sensor
-                if(topic.includes('Suhu')) {
-                    document.getElementById('temperature').textContent = payload + '°C';
-                }
-                if(topic.includes('Kelembaban')) {
-                    document.getElementById('humidity').textContent = payload + '%';
-                }
             });
-
-            client.on('error', (err) => {
-                console.error('❌ Error:', err);
-                updateStatus('disconnected', 'Error');
-            });
-
-            client.on('close', () => {
-                console.log('⚠️ Closed');
-                updateStatus('disconnected', 'Disconnected');
-            });
+            
+            client.on('close', () => updateUIStatus('disconnected'));
         }
 
-        // ==========================================
-        // DISCONNECT MQTT
-        // ==========================================
-        function disconnectMQTT() {
-            if(client) {
-                client.end();
-                client = null;
-                updateStatus('disconnected', 'Disconnected');
-            }
-        }
+        function disconnectMQTT() { if(client) client.end(); }
 
-        // ==========================================
-        // TOGGLE SINGLE RELAY
-        // ==========================================
         function toggleRelay(relay) {
-            if(!client || !client.connected) {
-                alert('⚠️ Hubungkan ke MQTT broker terlebih dahulu!');
-                return;
-            }
+            if(!client?.connected) return alert("Connect MQTT Dulu!");
+            client.publish(`${baseTopic}/${relay.topic}`, relay.status ? "0" : "1", { retain: true });
+        }
 
-            const newStatus = !relay.status;
-            const payload = newStatus ? 'ON' : 'OFF';
-            const commandTopic = `${baseTopic}/${relay.topic}/set`;
-
-            console.log('📤', commandTopic, '=', payload);
-
-            client.publish(commandTopic, payload, { qos: 0, retain: false }, (err) => {
-                if(!err) {
-                    relay.status = newStatus;
-                    renderRelays();
-                } else {
-                    console.error('❌ Publish error:', err);
-                }
+        function controlAll(val) {
+            if(!client?.connected) return alert("Connect MQTT Dulu!");
+            relays.forEach(r => {
+                let p = val === 'toggle' ? (r.status ? "0" : "1") : val;
+                client.publish(`${baseTopic}/${r.topic}`, p, { retain: true });
             });
         }
 
-        // ==========================================
-        // CONTROL ALL RELAYS
-        // ==========================================
-        function controlAll(action) {
-            if(!client || !client.connected) {
-                alert('⚠️ Hubungkan ke MQTT broker terlebih dahulu!');
-                return;
-            }
+        function updateDisplay() {
+            const grid = document.getElementById('relayGrid');
+            const list = document.getElementById('statusList');
+            grid.innerHTML = ''; 
+            list.innerHTML = '';
+            let onCount = 0;
 
-            relays.forEach(relay => {
-                let newStatus;
+            relays.forEach(r => {
+                if(r.status) onCount++;
                 
-                if(action === 'on') {
-                    newStatus = true;
-                } else if(action === 'off') {
-                    newStatus = false;
-                } else if(action === 'toggle') {
-                    newStatus = !relay.status;
-                }
+                // Card Utama dengan deteksi status NYALA/MATI
+                grid.innerHTML += `
+                    <div class="relay-card ${r.status ? 'on' : ''}" onclick="toggleRelay(relays[${r.id-1}])">
+                        <div class="relay-icon">${r.icon}</div>
+                        <div class="relay-name">${r.name}</div>
+                        <div style="font-size:11px; font-weight:bold; opacity:0.8">${r.status ? 'ON' : 'OFF'}</div>
+                    </div>`;
 
-                const payload = newStatus ? 'ON' : 'OFF';
-                const commandTopic = `${baseTopic}/${relay.topic}/set`;
-
-                client.publish(commandTopic, payload, { qos: 0, retain: false });
-                
-                relay.status = newStatus;
+                // Status List Ramping (Grid 2 Kolom)
+                list.innerHTML += `
+                    <div class="status-item ${r.status ? 'active' : ''}">
+                        <span class="status-name">${r.name}</span>
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <span style="font-size: 10px; font-weight: 700; color: ${r.status ? '#4ade80' : '#94a3b8'}">
+                                ${r.status ? 'AKTIF' : 'MATI'}
+                            </span>
+                            <div class="status-indicator"></div>
+                        </div>
+                    </div>`;
             });
 
-            renderRelays();
-            console.log(`✅ All relays: ${action}`);
+            document.getElementById('relayCount').textContent = `${onCount}/8`;
+            document.getElementById('costPerHour').textContent = `Rp ${onCount * 150}`;
         }
 
-        // ==========================================
-        // UPDATE STATUS UI
-        // ==========================================
-        function updateStatus(status, text) {
-            const statusEl = document.getElementById('mqttStatus');
-            const statusText = document.getElementById('statusText');
-            const connectBtn = document.getElementById('connectBtn');
-            const disconnectBtn = document.getElementById('disconnectBtn');
-
-            statusEl.className = 'mqtt-status ' + status;
-            statusText.textContent = text;
-
-            if(status === 'connected') {
-                connectBtn.style.display = 'none';
-                disconnectBtn.style.display = 'inline-block';
-                document.querySelectorAll('.input-group input, .input-group select').forEach(el => {
-                    el.disabled = true;
-                });
-            } else {
-                connectBtn.style.display = 'inline-block';
-                disconnectBtn.style.display = 'none';
-                document.querySelectorAll('.input-group input, .input-group select').forEach(el => {
-                    el.disabled = false;
-                });
-            }
+        function updateUIStatus(s) {
+            document.getElementById('mqttStatus').className = 'mqtt-status ' + s;
+            document.getElementById('statusText').textContent = s.toUpperCase();
+            document.getElementById('connectBtn').style.display = s === 'connected' ? 'none' : 'inline-block';
+            document.getElementById('disconnectBtn').style.display = s === 'connected' ? 'inline-block' : 'none';
         }
 
-        // ==========================================
-        // UPDATE STATISTICS
-        // ==========================================
-        function updateStats() {
-            const onCount = relays.filter(r => r.status).length;
-            const power = onCount * WATTS_PER_RELAY;
-            const costPerHour = Math.round((power / 1000) * TARIF_LISTRIK);
-
-            document.getElementById('relayCount').textContent = `${onCount}/6`;
-            document.getElementById('powerUsage').textContent = `${power} W`;
-            document.getElementById('costPerHour').textContent = `Rp ${costPerHour}`;
-        }
-
-        // ==========================================
-        // INITIALIZE ON LOAD
-        // ==========================================
-        window.onload = init;
-
-        // ==========================================
-        // CLEANUP ON CLOSE
-        // ==========================================
-        window.onbeforeunload = () => {
-            if(client) client.end();
-        };
+        window.onload = updateDisplay;
     </script>
 </body>
 </html>
