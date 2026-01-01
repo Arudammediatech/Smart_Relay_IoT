@@ -60,7 +60,7 @@
 
         /* Buttons & Animations */
         .btn { padding: 10px 20px; border: none; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
-        .btn:active { transform: scale(0.92); } /* Efek Tekan */
+        .btn:active { transform: scale(0.92); } 
         .btn-primary { background: linear-gradient(135deg, #4ade80, #22c55e); color: #000; }
         .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
         .btn-secondary { background: rgba(255, 255, 255, 0.15); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
@@ -82,22 +82,30 @@
             border-radius: 12px; padding: 15px; text-align: center; 
             cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
         }
-        .relay-card:active { transform: scale(0.9); } /* Animasi Tekan Kartu */
+        .relay-card:active { transform: scale(0.9); }
         
-        /* Warna Saat Mati (Abu-abu/Putih redup) */
-        .relay-card .relay-icon { font-size: 32px; margin-bottom: 8px; filter: grayscale(1) opacity(0.5); transition: 0.3s; }
+        .relay-card .relay-icon { font-size: 32px; margin-bottom: 8px; filter: grayscale(1) opacity(0.5); transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; height: 50px; }
         .relay-card .relay-name { color: #d1d5db; transition: 0.3s; }
 
-        /* Warna Saat Menyala (Glowing Kuning) */
+        /* Animasi Berputar khusus Kipas */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .relay-card.on .fan-animate { 
+            animation: spin 1.5s linear infinite; 
+        }
+
+        /* Warna Saat Menyala */
         .relay-card.on { border-color: #fbbf24; background: rgba(251, 191, 36, 0.2); box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
         .relay-card.on .relay-icon { filter: grayscale(0) opacity(1) drop-shadow(0 0 8px #fbbf24); }
         .relay-card.on .relay-name { color: #fff; font-weight: 700; }
 
-        /* Status List Detail (Ramping/Pendek) */
+        /* Status List Detail */
         .status-section { background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; border: 1px solid rgba(255, 255, 255, 0.2); }
         #statusList { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Membuat grid menyamping agar tidak panjang ke bawah */
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
             gap: 10px; 
         }
         .status-item { 
@@ -107,6 +115,13 @@
         }
         .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: #6b7280; transition: 0.3s; }
         .active .status-indicator { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+        
+        /* Ukuran Gambar PNG agar seragam */
+        .custom-img {
+            width: 45px;
+            height: 45px;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -161,16 +176,16 @@
         let client = null;
         const baseTopic = 'Arudam_mqtt';
         
-        // Data Relay tetap sesuai struktur asli Anda
+        // Konfigurasi Relay dengan File Gambar PNG
         const relays = [
-            { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', icon: '💡', status: false },
-            { id: 2, name: 'Lampu Kamar 1', topic: 'Lampu 2', icon: '💡', status: false },
-            { id: 3, name: 'Lampu Kamar 2', topic: 'Lampu 3', icon: '💡', status: false },
-            { id: 4, name: 'Ruang Keluarga', topic: 'Lampu 4', icon: '💡', status: false },
-            { id: 5, name: 'Lampu Dapur', topic: 'Lampu 5', icon: '💡', status: false },
-            { id: 6, name: 'Kamar Mandi', topic: 'Lampu 6', icon: '💡', status: false },
-            { id: 7, name: 'Mesin Air', topic: 'Pompa Air', icon: '💧', status: false },
-            { id: 8, name: 'Kipas', topic: 'Kipas', icon: '🌪️', status: false }
+            { id: 1, name: 'Lampu Teras', topic: 'Lampu 1', icon: '💡', status: false, isImg: false },
+            { id: 2, name: 'Lampu Kamar 1', topic: 'Lampu 2', icon: '💡', status: false, isImg: false },
+            { id: 3, name: 'Lampu Kamar 2', topic: 'Lampu 3', icon: '💡', status: false, isImg: false },
+            { id: 4, name: 'Ruang Keluarga', topic: 'Lampu 4', icon: '💡', status: false, isImg: false },
+            { id: 5, name: 'Lampu Dapur', topic: 'Lampu 5', icon: '💡', status: false, isImg: false },
+            { id: 6, name: 'Kamar Mandi', topic: 'Lampu 6', icon: '💡', status: false, isImg: false },
+            { id: 7, name: 'Mesin Air', topic: 'Pompa Air', icon: 'Pompa.png', status: false, isImg: true },
+            { id: 8, name: 'Kipas', topic: 'Kipas', icon: 'Kipas.png', status: false, isImg: true, isFan: true }
         ];
 
         function toggleConfig() { document.getElementById('configSection').classList.toggle('show'); }
@@ -200,7 +215,7 @@
                 
                 relays.forEach(r => {
                     if(topic === `${baseTopic}/${r.topic}`) {
-                        r.status = (payload === "1");
+                        r.status = (payload === "1" || payload === "ON");
                         updateDisplay();
                     }
                 });
@@ -234,15 +249,18 @@
             relays.forEach(r => {
                 if(r.status) onCount++;
                 
-                // Card Utama dengan deteksi status NYALA/MATI
+                // Cek apakah konten berupa file gambar atau emoji
+                let iconHTML = r.isImg 
+                    ? `<img src="${r.icon}" class="custom-img ${r.isFan ? 'fan-animate' : ''}">` 
+                    : r.icon;
+
                 grid.innerHTML += `
                     <div class="relay-card ${r.status ? 'on' : ''}" onclick="toggleRelay(relays[${r.id-1}])">
-                        <div class="relay-icon">${r.icon}</div>
+                        <div class="relay-icon">${iconHTML}</div>
                         <div class="relay-name">${r.name}</div>
                         <div style="font-size:11px; font-weight:bold; opacity:0.8">${r.status ? 'ON' : 'OFF'}</div>
                     </div>`;
 
-                // Status List Ramping (Grid 2 Kolom)
                 list.innerHTML += `
                     <div class="status-item ${r.status ? 'active' : ''}">
                         <span class="status-name">${r.name}</span>
