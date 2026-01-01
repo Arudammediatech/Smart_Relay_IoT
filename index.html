@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -43,12 +43,12 @@
         }
 
         .mqtt-status { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .mqtt-status.Terhubung { background: rgba(74, 222, 128, 0.2); border: 2px solid #4ade80; }
-        .mqtt-status.Tidak Terhubung { background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; }
+        .mqtt-status.connected { background: rgba(74, 222, 128, 0.2); border: 2px solid #4ade80; }
+        .mqtt-status.disconnected { background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; }
 
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .Terhubung .status-dot { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
-        .Tidak Terhubung .status-dot { background: #ef4444; }
+        .connected .status-dot { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+        .disconnected .status-dot { background: #ef4444; }
 
         /* Config */
         .config-section { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
@@ -130,12 +130,12 @@
             <div class="header-main">
                 <h1>🏠 Smart Arudam IoT</h1>
                 <div class="header-controls">
-                    <div class="mqtt-status Tidak Terhubung" id="mqttStatus">
-                        <div class="status-dot"></div> <span id="statusText">Tidak Terhubung</span>
+                    <div class="mqtt-status disconnected" id="mqttStatus">
+                        <div class="status-dot"></div> <span id="statusText">Disconnected</span>
                     </div>
                     <button class="btn btn-secondary" onclick="toggleConfig()">⚙️ Config</button>
-                    <button class="btn btn-primary" id="connectBtn" onclick="connectMQTT()">🔌 Hubungkan</button>
-                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectMQTT()" style="display: none;">✖️ ⛔ Putuskan</button>
+                    <button class="btn btn-primary" id="connectBtn" onclick="connectMQTT()">🔌 Connect</button>
+                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectMQTT()" style="display: none;">✖️ Disconnect</button>
                 </div>
             </div>
             <div class="config-section" id="configSection">
@@ -202,7 +202,7 @@
             });
 
             client.on('connect', () => {
-                updateUIStatus('Terhubung');
+                updateUIStatus('connected');
                 relays.forEach(r => client.subscribe(`${baseTopic}/${r.topic}`));
                 client.subscribe(`${baseTopic}/Suhu`);
                 client.subscribe(`${baseTopic}/kebakaran`);
@@ -221,18 +221,18 @@
                 });
             });
             
-            client.on('close', () => updateUIStatus('Tidak Terhubung'));
+            client.on('close', () => updateUIStatus('disconnected'));
         }
 
         function disconnectMQTT() { if(client) client.end(); }
 
         function toggleRelay(relay) {
-            if(!client?.Terhubung) return alert("Connect MQTT Dulu!");
+            if(!client?.connected) return alert("Connect MQTT Dulu!");
             client.publish(`${baseTopic}/${relay.topic}`, relay.status ? "0" : "1", { retain: true });
         }
 
         function controlAll(val) {
-            if(!client?.Terhubung) return alert("Connect MQTT Dulu!");
+            if(!client?.connected) return alert("Connect MQTT Dulu!");
             relays.forEach(r => {
                 let p = val === 'toggle' ? (r.status ? "0" : "1") : val;
                 client.publish(`${baseTopic}/${r.topic}`, p, { retain: true });
@@ -280,11 +280,12 @@
         function updateUIStatus(s) {
             document.getElementById('mqttStatus').className = 'mqtt-status ' + s;
             document.getElementById('statusText').textContent = s.toUpperCase();
-            document.getElementById('connectBtn').style.display = s === 'Terhubung' ? 'none' : 'inline-block';
-            document.getElementById('disconnectBtn').style.display = s === 'Terhubung' ? 'inline-block' : 'none';
+            document.getElementById('connectBtn').style.display = s === 'connected' ? 'none' : 'inline-block';
+            document.getElementById('disconnectBtn').style.display = s === 'connected' ? 'inline-block' : 'none';
         }
 
         window.onload = updateDisplay;
     </script>
 </body>
 </html>
+
